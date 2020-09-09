@@ -1,0 +1,94 @@
+--!)following code is from LocaVSCrime.hive file/
+
+create view 1_1 as
+	select TypeLoc, Day1Week, count(*) as td, case
+		when Day1Week in ("Sat", "Sun") then 'Weekend'
+		when Day1Week not in ("Sat", "Sun") and Day1Week is not NULL then 'Weekday'
+		when Day1Week is NULL then 'missing'
+		end as days from Police_Incidents
+		group by TypeLoc, Day1Week;
+
+create view 1_2 as
+	select TypeLoc, avg(td) as avgtd, days
+		from 1_1
+		group by TypeLoc, days;  
+    
+    
+    
+    --2)following code is from peakPeriod.hive file/
+    
+    create view 2_1 AS 
+SELECT IncNumWY,
+CASE 
+ WHEN Time1Occur LIKE '0:%' OR Time1Occur LIKE '1:%'  THEN '0:00-1:59'
+ WHEN Time1Occur LIKE '2:%' OR Time1Occur LIKE '3:%'  THEN '2:00-3:59'
+ WHEN Time1Occur LIKE '4:%' OR Time1Occur LIKE '5:%'  THEN '4:00-5:59'
+ WHEN Time1Occur LIKE '6:%' OR Time1Occur LIKE '7:%'  THEN '6:00-7:59'
+ WHEN Time1Occur LIKE '8:%' OR Time1Occur LIKE '9:%'  THEN '8:00-9:59'
+ WHEN Time1Occur LIKE '10:%' OR Time1Occur LIKE '11:%'  THEN '10:00-11:59'
+ WHEN Time1Occur LIKE '12:%' OR Time1Occur LIKE '13:%'  THEN '12:00-13:59'
+ WHEN Time1Occur LIKE '14:%' OR Time1Occur LIKE '15:%'  THEN '14:00-15:59'
+ WHEN Time1Occur LIKE '16:%' OR Time1Occur LIKE '17:%'  THEN '16:00-17:59'
+ WHEN Time1Occur LIKE '18:%' OR Time1Occur LIKE '19:%'  THEN '18:00-19:59'
+ WHEN Time1Occur LIKE '20:%' OR Time1Occur LIKE '21:%'  THEN '20:00-21:59'
+ WHEN Time1Occur LIKE '22:%' OR Time1Occur LIKE '23:%'  THEN '22:00-23:59'
+ WHEN Time1Occur IS NULL THEN NULL
+END AS timeperiod,
+CASE
+WHEN Mon1Occur in ('January', 'February', 'March') Then 'Spring'
+WHEN Mon1Occur in ('April', 'May', 'June') THEN 'Summer'
+WHEN Mon1Occur in ('July', 'August', 'September') THEN 'Autumn'
+WHEN Mon1Occur in ('October', 'November', 'December') Then 'Winter'
+WHEN Mon1Occur is NULL Then 'missing'
+END AS season
+from Police_Incidents;
+
+create view 2_2 as
+	select timeperiod,season, count(IncNumWY) as ts from 2_1
+		group by timeperiod, season;
+    
+    
+    
+    --3)following code is from zipFer.hive file/
+    CREATE VIEW 3_1 AS
+SELECT ZipCode, COUNT(*) AS dashen 
+FROM Police_Incidents
+GROUP BY ZipCode;
+
+CREATE view 3_2 AS
+SELECT A.dashen, B.*
+FROM 3_1 AS A JOIN Fertility AS B
+ON (A.ZipCode = B.Zipcode);
+    
+    
+    
+    --4)following code is from timeRelaType.hive file/
+    CREATE view 5_1 AS
+SELECT UCROffendeDesc, CASE
+WHEN unix_timestamp(Time1Occur, 'HH:mm') < 18000 
+OR unix_timestamp(Time1Occur, 'HH:mm') >= 79200
+AND unix_timestamp(Time1Occur, 'HH:mm') < 86400
+THEN 'Late Night'
+WHEN unix_timestamp(Time1Occur, 'HH:mm') >= 18000
+AND unix_timestamp(Time1Occur, 'HH:mm') < 61200
+THEN 'Day'
+WHEN unix_timestamp(Time1Occur, 'HH:mm') >= 61200
+AND unix_timestamp(Time1Occur, 'HH:mm') < 79200
+THEN 'Evening'
+END AS periods
+FROM Police_Incidents;
+
+CREATE view 5_2 AS
+SELECT UCROffendeDesc, periods, count(*) as UP
+FROM 5_1
+GROUP BY UCRoffendeDesc, periods;
+
+
+    
+    --5)following code is from drugRelate.hive file/
+    
+    CREATE view 4_1 AS
+Select UCROffendeDesc, DrugRelatedIncident, COUNT(*) AS Incidents 
+From Police_Incidents
+GROUP BY DrugRelatedIncident, UCROffendeDesc;
+    
